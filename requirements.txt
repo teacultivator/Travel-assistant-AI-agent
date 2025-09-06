@@ -1,0 +1,26 @@
+# Core LangChain & LangGraph
+langgraph
+langchain-core
+langchain-google-genai  # For Gemini integration
+langchain-community
+
+# Google Generative AI
+google-generativeai
+
+# Environment variable management
+python-dotenv
+
+# Data manipulation and validation
+pandas
+pydantic
+
+# Optional: For the eventual web interface
+streamlit
+gradio
+
+# For making HTTP requests to real APIs in Phase 2
+requests
+aiohttp
+
+# For handling dates and times
+python-dateutil
