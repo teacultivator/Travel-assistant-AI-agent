@@ -3,12 +3,6 @@ import os
 import requests
 from dotenv import load_dotenv
 
-class FlightState(TypedDict):
-    origin: str            # source city/airport
-    destination: str       # destination city/airport
-    date: str              # departure date (YYYY-MM-DD)
-    flights: List[Dict]    # results from API
-
 load_dotenv()
 
 API_KEY = os.getenv("AMADEUS_API_KEY")
