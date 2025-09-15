@@ -47,7 +47,7 @@ def get_access_token():
     
     # Save new token and expiry into global variables
     ACCESS_TOKEN = data["access_token"]
-    TOKEN_EXPIRY = time.time() + int(data["expires_in"])
+    TOKEN_EXPIRY = time.time() + int(data["expires_in"]) - 20 # 20 seconds buffer
     
     return ACCESS_TOKEN
 
