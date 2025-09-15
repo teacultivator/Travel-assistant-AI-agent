@@ -87,7 +87,7 @@ def query_parser_agent(state: State) -> Dict[str, Any]:
                 break
         
         if not query:
-            response_msg = "❓ I didn't receive a query. Please tell me about your travel plans."
+            response_msg = "I didn't receive a query. Please tell me about your travel plans."
             return {
                 **state,  # Preserve all existing state
                 "messages": messages + [AIMessage(content=response_msg)],
@@ -174,20 +174,20 @@ def query_parser_agent(state: State) -> Dict[str, Any]:
             missing_prompts: List[str] = [field_prompts.get(field, field) for field in missing_fields]
             missing_list: str = ", ".join(missing_prompts)
             
-            response_msg = f"🔄 I need more information. Please provide your {missing_list}."
+            response_msg = f"I need more information. Please provide your {missing_list}."
             next_agent = "query_parser_agent"
             
         else:
             # All required info collected
-            summary = f"""✅ Great! Here's your travel information:
-🛫 From: {final_state['origin']} → {final_state['destination']}
-📅 Date: {final_state['departure_date']}
-🚌 Mode: {final_state['mode'].title()}"""
+            summary = f""" Great! Here's your travel information:
+     From: {final_state['origin']} → {final_state['destination']}
+     Date: {final_state['departure_date']}
+     Mode: {final_state['mode'].title()}"""
             
             if final_state.get('return_date'):
-                summary += f"\n🔄 Return: {final_state['return_date']}"
+                summary += f"\n Return: {final_state['return_date']}"
             if final_state.get('departure_time'):
-                summary += f"\n⏰ Departure: {final_state['departure_time']}"
+                summary += f"\n Departure: {final_state['departure_time']}"
                 
             response_msg = summary + "\n\nProceeding to find options..."
             
@@ -214,120 +214,120 @@ def query_parser_agent(state: State) -> Dict[str, Any]:
     except Exception as e:
         # Ensure messages is defined for error case
         messages = state.get("messages", []) or []
-        error_msg = f"❌ Sorry, I encountered an error processing your request: {str(e)}"
+        error_msg = f" Sorry, I encountered an error processing your request: {str(e)}"
         return {
             **state,  # Preserve existing state
             "messages": messages + [AIMessage(content=error_msg)],
             "next_agent": "query_parser_agent"
         }
 
-def print_state_info(state: State, title: str):
-    """Helper function to print current state information"""
-    print(f"\n{'='*50}")
-    print(f"{title}")
-    print(f"{'='*50}")
+# def print_state_info(state: State, title: str):
+#     """Helper function to print current state information"""
+#     print(f"\n{'='*50}")
+#     print(f"{title}")
+#     print(f"{'='*50}")
     
-    # Print travel info
-    travel_fields = ["origin", "destination", "departure_date", "return_date", 
-                    "departure_time", "return_time", "mode"]
+#     # Print travel info
+#     travel_fields = ["origin", "destination", "departure_date", "return_date", 
+#                     "departure_time", "return_time", "mode"]
     
-    print("🧳 Travel Information:")
-    for field in travel_fields:
-        value = state.get(field, "")
-        print(f"  {field.replace('_', ' ').title()}: {value or 'Not set'}")
+#     print("🧳 Travel Information:")
+#     for field in travel_fields:
+#         value = state.get(field, "")
+#         print(f"  {field.replace('_', ' ').title()}: {value or 'Not set'}")
     
-    print(f"\n🤖 Next Agent: {state.get('next_agent', 'Not set')}")
+#     print(f"\n🤖 Next Agent: {state.get('next_agent', 'Not set')}")
     
-    # Print last message
-    messages = state.get("messages", [])
-    if messages:
-        last_msg = messages[-1]
-        print(f"\n💬 Last Response:")
-        print(f"  {last_msg.content}")
+#     # Print last message
+#     messages = state.get("messages", [])
+#     if messages:
+#         last_msg = messages[-1]
+#         print(f"\n💬 Last Response:")
+#         print(f"  {last_msg.content}")
 
-def test_query_parser():
-    """Test the query parser agent with various scenarios"""
+# def test_query_parser():
+#     """Test the query parser agent with various scenarios"""
     
-    print("🚀 Starting Query Parser Agent Tests")
-    print("=" * 60)
+#     print("🚀 Starting Query Parser Agent Tests")
+#     print("=" * 60)
     
-    # Test Case 1: Complete travel information
-    print("\n📝 TEST CASE 1: Complete travel information")
-    state1 = State({
-        "messages": [HumanMessage(content="I want to fly from New York to London on December 25th, 2024")]
-    })
+#     # Test Case 1: Complete travel information
+#     print("\n📝 TEST CASE 1: Complete travel information")
+#     state1 = State({
+#         "messages": [HumanMessage(content="I want to fly from New York to London on December 25th, 2024")]
+#     })
     
-    result1 = query_parser_agent(state1)
-    print_state_info(result1, "Result 1: Complete Information")
+#     result1 = query_parser_agent(state1)
+#     print_state_info(result1, "Result 1: Complete Information")
     
-    # Test Case 2: Incomplete information requiring follow-up
-    print("\n📝 TEST CASE 2: Incomplete information")
-    state2 = State({
-        "messages": [HumanMessage(content="I want to travel to Paris")]
-    })
+#     # Test Case 2: Incomplete information requiring follow-up
+#     print("\n📝 TEST CASE 2: Incomplete information")
+#     state2 = State({
+#         "messages": [HumanMessage(content="I want to travel to Paris")]
+#     })
     
-    result2 = query_parser_agent(state2)
-    print_state_info(result2, "Result 2: Missing Information")
+#     result2 = query_parser_agent(state2)
+#     print_state_info(result2, "Result 2: Missing Information")
     
-    # Test Case 3: Follow-up with missing information
-    print("\n📝 TEST CASE 3: Follow-up with missing info")
-    state3 = State({
-        "messages": [
-            HumanMessage(content="I want to travel to Paris"),
-            AIMessage(content="I need more information..."),
-            HumanMessage(content="From Mumbai on January 15th, 2025 by train")
-        ],
-        "destination": "Paris"  # Previous state
-    })
+#     # Test Case 3: Follow-up with missing information
+#     print("\n📝 TEST CASE 3: Follow-up with missing info")
+#     state3 = State({
+#         "messages": [
+#             HumanMessage(content="I want to travel to Paris"),
+#             AIMessage(content="I need more information..."),
+#             HumanMessage(content="From Mumbai on January 15th, 2025 by train")
+#         ],
+#         "destination": "Paris"  # Previous state
+#     })
     
-    result3 = query_parser_agent(state3)
-    print_state_info(result3, "Result 3: Follow-up Information")
+#     result3 = query_parser_agent(state3)
+#     print_state_info(result3, "Result 3: Follow-up Information")
     
-    # Test Case 4: Modification of existing booking
-    print("\n📝 TEST CASE 4: Modify existing booking")
-    state4 = State({
-        "messages": [
-            HumanMessage(content="Actually, change the mode to bus and departure time to 10:30 AM")
-        ],
-        "origin": "Mumbai",
-        "destination": "Paris", 
-        "departure_date": "2025-01-15",
-        "mode": "train"
-    })
+#     # Test Case 4: Modification of existing booking
+#     print("\n📝 TEST CASE 4: Modify existing booking")
+#     state4 = State({
+#         "messages": [
+#             HumanMessage(content="Actually, change the mode to bus and departure time to 10:30 AM")
+#         ],
+#         "origin": "Mumbai",
+#         "destination": "Paris", 
+#         "departure_date": "2025-01-15",
+#         "mode": "train"
+#     })
     
-    result4 = query_parser_agent(state4)
-    print_state_info(result4, "Result 4: Modified Booking")
+#     result4 = query_parser_agent(state4)
+#     print_state_info(result4, "Result 4: Modified Booking")
     
-    # Test Case 5: Round trip booking
-    print("\n📝 TEST CASE 5: Round trip booking")
-    state5 = State({
-        "messages": [HumanMessage(content="Book a round trip flight from Delhi to Tokyo, departing March 10th and returning March 20th, 2025")]
-    })
+#     # Test Case 5: Round trip booking
+#     print("\n📝 TEST CASE 5: Round trip booking")
+#     state5 = State({
+#         "messages": [HumanMessage(content="Book a round trip flight from Delhi to Tokyo, departing March 10th and returning March 20th, 2025")]
+#     })
     
-    result5 = query_parser_agent(state5)
-    print_state_info(result5, "Result 5: Round Trip")
+#     result5 = query_parser_agent(state5)
+#     print_state_info(result5, "Result 5: Round Trip")
     
-    # Test Case 6: Empty query
-    print("\n📝 TEST CASE 6: Empty query")
-    state6 = State({
-        "messages": []
-    })
+#     # Test Case 6: Empty query
+#     print("\n📝 TEST CASE 6: Empty query")
+#     state6 = State({
+#         "messages": []
+#     })
     
-    result6 = query_parser_agent(state6)
-    print_state_info(result6, "Result 6: Empty Query")
+#     result6 = query_parser_agent(state6)
+#     print_state_info(result6, "Result 6: Empty Query")
     
-    print(f"\n{'='*60}")
-    print("✅ All tests completed!")
-    print("🎯 Check the results above to verify the query parser is working correctly")
+#     print(f"\n{'='*60}")
+#     print("✅ All tests completed!")
+#     print("🎯 Check the results above to verify the query parser is working correctly")
 
-if __name__ == "__main__":
-    # Set up environment variables if needed
-    # os.environ["GOOGLE_API_KEY"] = "your-api-key-here"  # Uncomment and add your API key
+# if __name__ == "__main__":
+#     # Set up environment variables if needed
+#     # os.environ["GOOGLE_API_KEY"] = "your-api-key-here"  # Uncomment and add your API key
     
-    try:
-        test_query_parser()
-    except Exception as e:
-        print(f"❌ Test failed with error: {e}")
-        print("🔧 Make sure you have set your GOOGLE_API_KEY environment variable")
-        print("🔧 Also ensure all required packages are installed:")
-        print("   pip install langchain langchain-google-genai langgraph")
+#     try:
+#         test_query_parser()
+#     except Exception as e:
+#         print(f"❌ Test failed with error: {e}")
+#         print("🔧 Make sure you have set your GOOGLE_API_KEY environment variable")
+#         print("🔧 Also ensure all required packages are installed:")
+#         print("   pip install langchain langchain-google-genai langgraph")
