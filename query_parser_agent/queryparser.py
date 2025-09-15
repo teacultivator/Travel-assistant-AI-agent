@@ -7,12 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph import StateGraph, END
-
-# Simple State class for testing (replace with your actual State import)
-class State(Dict[str, Any]):
-    """Simple state class for testing"""
-    pass
-
+from graph.state import State
 # Initialize LLM consistently
 llm = init_chat_model("google_genai:gemini-2.0-flash")
 

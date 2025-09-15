@@ -22,3 +22,6 @@ class State(MessagesState):
     train_results: Optional[List[Dict]]
     bus_results: Optional[List[Dict]]
     flight_results: Optional[List[Dict]]
+    booking_options: list
+    selected_option: dict
+    booking_confirmed: bool
