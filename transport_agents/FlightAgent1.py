@@ -1,19 +1,44 @@
-from langgraph.graph import StateGraph, END
-from typing import TypedDict, List, Dict
+from langgraph.graph import StateGraph, END, MessagesState
+from typing import TypedDict, List, Dict, Optional
+from enum import Enum
 from API_helper import get_access_token, search_flights
 
-class FlightState(TypedDict):
-    origin: str            # source city/airport
-    destination: str       # destination city/airport
-    date: str              # departure date (YYYY-MM-DD)
-    flights: List[Dict]    # results from API
+class TransportMode(Enum):
+    FLIGHT = "flight"
+    BUS = "bus"
+    TRAIN = "train"
 
-def flight_search_node(state: FlightState) -> FlightState:
+# class FlightState(TypedDict):
+#     origin: str            # source city/airport
+#     destination: str       # destination city/airport
+#     departure_date: str    # departure date (YYYY-MM-DD)
+#     flight_results: List[Dict]  # results from API
+
+class State(MessagesState):
+    # Input
+    next_agent: str
+    origin: Optional[str]
+    destination: Optional[str]
+    departure_date: Optional[str]
+    return_date: Optional[str]
+    departure_time: Optional[str]
+    return_time: Optional[str]
+    mode: Optional[TransportMode]
+
+    # Output / processing
+    train_results: Optional[List[Dict]]
+    bus_results: Optional[List[Dict]]
+    flight_results: Optional[List[Dict]]
+    booking_options: list
+    selected_option: dict
+    booking_confirmed: bool
+
+def flight_search_node(state: State) -> FlightState:
     try:
         token = get_access_token()
         # get results in json format
         results = search_flights(
-            state["origin"], state["destination"], state["date"], token
+            state["origin"], state["destination"], state["departure_date"], token
         )
         # Extract clean results
         flights = []
@@ -30,14 +55,14 @@ def flight_search_node(state: FlightState) -> FlightState:
                 "start_time": start_time,
                 "end_time": end_time
             })
-        state["flights"] = flights
-    except Exception as e: # data does not exist in results
-        state["flights"] = []
+        state["flight_results"] = flights
+    except Exception as e:  # data does not exist in results
+        state["flight_results"] = []
         print("Error fetching flights:", e)
     return state
 
 # Building the LangGraph workflow
-graph = StateGraph(FlightState)
+graph = StateGraph(State)
 graph.add_node("flight_search_node", flight_search_node)
 graph.set_entry_point("flight_search_node")
 graph.add_edge("flight_search_node", END)
@@ -49,24 +74,24 @@ app = graph.compile()
 if __name__ == "__main__":
     # Example test run
     initial_state = {
-        "origin": "BOM",          # Mumbai
-        "destination": "DEL",     # Delhi
-        "date": "2025-09-20",     # YYYY-MM-DD
-        "flights": []
+        "origin": "DEL",          # Mumbai
+        "destination": "JFK",     # Delhi
+        "departure_date": "2025-12-17",     # YYYY-MM-DD
+        "flight_results": []
     }
 
     print("Running flight search agent...")
     final_state = app.invoke(initial_state)
 
-    flights = final_state.get("flights", [])
-    if (not flights):
+    # FIX: use "flight_results", not "flights"
+    flight_results = final_state.get("flight_results", [])
+    if not flight_results:
         print("No flights found.")
     else:
-        print(f"Found {len(flights)} flights:\n")
-        for i, f in enumerate(flights, 1):
-            print(f"{i}. Airline: {f["airline"]} | Price: ${f["price"]}", end = " || ")
+        print(f"Found {len(flight_results)} flights:\n")
+        for i, f in enumerate(flight_results, 1):
+            print(f"{i}. Airline: {f['airline']} | Price: USD {f['price']}", end=" || ")
             try:
-                print(f"Departure Time: {f["start_time"]} | Arrival Time: {f["end_time"]}")
+                print(f"Departure Time: {f['start_time']} | Arrival Time: {f['end_time']}")
             except Exception:
                 print("Could not fetch exact timings.")
-                  
