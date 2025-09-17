@@ -11,6 +11,7 @@ from typing import TypedDict, List, Dict, Optional, Annotated
 from enum import Enum
 from langgraph.graph.message import add_messages
 from dotenv import load_dotenv
+from langgraph.graph import MessagesState
 
 # Load environment variables for API keys
 load_dotenv()
@@ -30,8 +31,7 @@ class TransportMode(Enum):
     BUS = "bus"
     TRAIN = "train"
 
-class State(TypedDict):
-    messages: Annotated[list, add_messages]
+class State(MessageState):
     next_agent: Optional[str]
     origin: Optional[str]
     destination: Optional[str]
@@ -217,5 +217,6 @@ def run_chatbot():
 
 if __name__ == "__main__":
     run_chatbot()
+
 
 
