@@ -3,6 +3,8 @@ from typing import TypedDict, List, Dict, Optional
 from enum import Enum
 from API_helper import get_access_token, search_flights
 
+from LLM_helper import filter_and_summarize_flights, print_flights_table
+
 class TransportMode(Enum):
     FLIGHT = "flight"
     BUS = "bus"
@@ -33,7 +35,7 @@ class State(MessagesState):
     selected_option: dict
     booking_confirmed: bool
 
-def flight_search_node(state: State) -> FlightState:
+def flight_search_node(state: State) -> State:
     try:
         token = get_access_token()
         # get results in json format
@@ -71,27 +73,51 @@ graph.add_edge("flight_search_node", END)
 app = graph.compile()
 
 # Testing
+# if __name__ == "__main__":
+#     # Example test run
+#     initial_state = {
+#         "origin": "DEL",          # Mumbai
+#         "destination": "JFK",     # New York
+#         "departure_date": "2025-12-17",     # YYYY-MM-DD
+#         "flight_results": []
+#     }
+
+#     print("Running flight search agent...")
+#     final_state = app.invoke(initial_state)
+
+#     # FIX: use "flight_results", not "flights"
+#     flight_results = final_state.get("flight_results", [])
+#     if not flight_results:
+#         print("No flights found.")
+#     else:
+#         print(f"Found {len(flight_results)} flights:\n")
+#         for i, f in enumerate(flight_results, 1):
+#             print(f"{i}. Airline: {f['airline']} | Price: USD {f['price']}", end=" || ")
+#             print(f"Departure Time: {f['start_time']} | Arrival Time: {f['end_time']} | No. of stops: {f['stops']}")
+            
 if __name__ == "__main__":
-    # Example test run
+    user_query = "Find me the cheapest flights from Delhi to New York on Dec 17"
     initial_state = {
-        "origin": "DEL",          # Mumbai
-        "destination": "JFK",     # Delhi
-        "departure_date": "2025-12-17",     # YYYY-MM-DD
+        "origin": "DEL",
+        "destination": "JFK",
+        "departure_date": "2025-12-17",
         "flight_results": []
     }
 
     print("Running flight search agent...")
     final_state = app.invoke(initial_state)
 
-    # FIX: use "flight_results", not "flights"
     flight_results = final_state.get("flight_results", [])
-    if not flight_results:
+    if (not flight_results):
         print("No flights found.")
     else:
-        print(f"Found {len(flight_results)} flights:\n")
-        for i, f in enumerate(flight_results, 1):
-            print(f"{i}. Airline: {f['airline']} | Price: USD {f['price']}", end=" || ")
-            try:
-                print(f"Departure Time: {f['start_time']} | Arrival Time: {f['end_time']}")
-            except Exception:
-                print("Could not fetch exact timings.")
+        # Pass results + query to Gemini
+        llm_output = filter_and_summarize_flights(user_query, flight_results)
+
+        # Print summary
+        print("\nGemini Summary:")
+        print(llm_output["summary"])
+
+        # Print filtered flights in table
+        print("\nFiltered Flight Results:")
+        print_flights_table(llm_output["filtered_results"])
