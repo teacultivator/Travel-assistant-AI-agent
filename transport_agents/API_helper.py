@@ -59,7 +59,7 @@ def search_flights(origin:str , destination:str , date:str , token):
         "destinationLocationCode": destination,
         "departureDate": date,
         "adults": 1,
-        "max": 5
+        "max": 40
     }
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(url, params=params, headers=headers)
