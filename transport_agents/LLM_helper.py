@@ -1,6 +1,6 @@
 from tabulate import tabulate
 import google.generativeai as genai
-import os, json
+import os, json, re
 from dotenv import load_dotenv
 
 def print_flights_table(flight_results):
@@ -14,12 +14,12 @@ def print_flights_table(flight_results):
             f.get("airline", ""),
             f.get("price", ""),
             f.get("duration", ""),
-            f.get("start_time", ""),
-            f.get("end_time", ""),
+            f.get("departure_time", ""),
+            f.get("arrival_time", ""),
             f.get("stops", "")
         ])
     
-    headers = ["Airline", "Price (USD)", "Duration", "Departure", "Arrival"]
+    headers = ["Airline", "Price (USD)", "Duration", "Departure", "Arrival", "Stops"]
     print(tabulate(table, headers=headers, tablefmt="fancy_grid"))
 
 
@@ -28,34 +28,67 @@ load_dotenv()
 genai.configure(api_key = os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
-def filter_and_summarize_flights(user_query: str, flight_results: list):
+import google.generativeai as genai
+import os, json
+from dotenv import load_dotenv
+
+load_dotenv()
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+def filter_and_extract_flights(user_query: str, raw_results: dict):
     """
-    Uses Gemini 2.5 Flash to filter, summarize, and return JSON results based on the query.
+    Sends the raw Amadeus API results + user query to Gemini.
+    Gemini filters relevant flights, extracts fields into JSON, and summarizes.
     """
-    flights_json = json.dumps(flight_results, indent=2)
+    raw_json = json.dumps(raw_results, indent=2)
 
     prompt = f"""
     The user asked: "{user_query}"
 
-    Here are the flight options (JSON):
-    {flights_json}
+    Here is the raw data of flights offers (Amadeus API response):
+    {raw_json}
 
-    Task:
-    1. (MOST IMPORTANT) Filter these flights to match the user's intent (e.g. cheapest, shortest duration, specific airline, non-stop, etc).
-    2. Summarize the filtered results in 1–2 sentences.
-    3. Your output should be only a JSON object with fields:
-       - "summary": string
-       - "filtered_results": list of flight dicts (MUST have the same schema as input)
+    Your task:
+    1. Filter the flight offers that are most relevant to the query.
+    2. For each relevant flight, ALWAYS extract the fields mentioned below. All fields are MANDATORY!
+       - airline
+       - price (total, USD)
+       - duration
+       - departure_time
+       - arrival_time
+       - stops (number of stops)
+    3. MOST IMPORANTLY, Output a valid JSON object with this structure:
+       {{
+         "summary": "short human-friendly text summarizing results in 1-2 sentences",
+         "filtered_results": [
+            {{
+              "airline": "...",
+              "price": "...",
+              "duration": "...",
+              "departure_time": "...",
+              "arrival_time": "...",
+              "stops": "..."
+            }}
+         ]
+       }}
+       You may use raw_json["data"][<index of offer>]["price"]["total"] to extract the price.
+    Make sure it is valid JSON only, no extra text outside JSON. STRICTLY do NOT include any tables or formatting.
     """
 
+    def safe_json_parse(raw_text: str):
+        # Remove markdown fences if present
+        clean = re.sub(r"^```json\s*|\s*```$", "", raw_text.strip(), flags=re.DOTALL)
+        return json.loads(clean)
+
     response = model.generate_content(prompt)
+    print(response.text)
     try:
-        # Gemini might return JSON inside text, so we need to parse it
-        parsed = json.loads(response.text)
+        parsed = safe_json_parse(response.text)
         return parsed
     except Exception:
-        # Fallback: return all flights if parsing fails
         return {
-            "summary": "Sure, here are all the flight options tailored to your needs.", # Dummy response
-            "filtered_results": flight_results
+            "summary": "Could not parse Gemini output. Showing no filtered results.",
+            "filtered_results": []
         }
