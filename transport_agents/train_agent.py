@@ -12,6 +12,7 @@ from enum import Enum
 from langgraph.graph.message import add_messages
 from dotenv import load_dotenv
 from langgraph.graph import MessagesState
+from graph.state import State
 
 # Load environment variables for API keys
 load_dotenv()
@@ -31,21 +32,6 @@ class TransportMode(Enum):
     BUS = "bus"
     TRAIN = "train"
 
-class State(MessageState):
-    next_agent: Optional[str]
-    origin: Optional[str]
-    destination: Optional[str]
-    departure_date: Optional[str]
-    return_date: Optional[str]
-    departure_time: Optional[str]
-    return_time: Optional[str]
-    mode: Optional[TransportMode]
-    train_results: Optional[List[Dict]]
-    bus_results: Optional[List[Dict]]
-    flight_results: Optional[List[Dict]]
-    booking_options: Optional[list]
-    selected_option: Optional[dict]
-    booking_confirmed: Optional[bool]
 
 def fetch_trains_by_day(date_str: str, source: str, destination: str) -> str:
     try:
@@ -217,6 +203,7 @@ def run_chatbot():
 
 if __name__ == "__main__":
     run_chatbot()
+
 
 
 
