@@ -1,4 +1,3 @@
-from typing import TypedDict, List, Dict
 import os, requests, time, re
 from dotenv import load_dotenv
 import pandas as pd
@@ -8,35 +7,17 @@ load_dotenv()
 API_KEY = os.getenv("AMADEUS_API_KEY")
 API_SECRET = os.getenv("AMADEUS_API_SECRET")
 
-# def get_access_token():
-#     url = "https://test.api.amadeus.com/v1/security/oauth2/token"
-#     response = requests.post(
-#         url,
-#         data={
-#         "grant_type": "client_credentials",
-#         "client_id": API_KEY,
-#         "client_secret": API_SECRET
-#     })
-#     if (response.status_code != 200):
-#         raise Exception(f"Failed to generate access token. Status code: {response.status_code}\n{response.text}")
-#     token = response.json()["access_token"]
-#     return token
-
 ACCESS_TOKEN = None
 TOKEN_EXPIRY = 0  # unix timestamp
 
 # Get the directory where this script (API_helper.py) resides
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Construct full path to Airports1.xlsx
-AIRPORTS_FILE = os.path.join(BASE_DIR, "Airports1.csv")
+# Construct full path to Airports2.csv
+AIRPORTS_FILE = os.path.join(BASE_DIR, "Airports2.csv")
 
 # Load airport codes safely
 _airports_df = pd.read_csv(AIRPORTS_FILE)[["City", "IATA_Code"]].dropna()
 _airports_df["City"] = _airports_df["City"].str.strip().str.lower()
-
-# Loading airport codes
-# _airports_df = pd.read_excel("Airports1.xlsx")[["City", "IATA_Code"]].dropna()
-# _airports_df["City"] = _airports_df["City"].str.strip().str.lower()
 
 def get_access_token():
     global ACCESS_TOKEN, TOKEN_EXPIRY
@@ -93,5 +74,6 @@ def search_flights(origin_city: str, destination_city: str, date: str, token: st
         "max": 40
     }
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(url, params=params, headers=headers)
-    return response.json()
+    response = requests.get(url, params=params, headers=headers).json()
+    print(response)
+    return response
