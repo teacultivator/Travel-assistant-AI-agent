@@ -1,33 +1,11 @@
-from langgraph.graph import StateGraph, END, MessagesState
-from typing import TypedDict, List, Dict, Optional
-from enum import Enum
-from API_helper import get_access_token, search_flights
+from langgraph.graph import StateGraph, END  # , MessagesState
+# from typing import TypedDict, List, Dict, Optional
+# from enum import Enum
+from transport_agents.API_helper import get_access_token, search_flights
+from graph import state  # self built state 
+from transport_agents.LLM_helper import filter_and_extract_flights, print_flights_table
 
-from LLM_helper import filter_and_extract_flights, print_flights_table
-
-class TransportMode(Enum):
-    FLIGHT = "flight"
-    BUS = "bus"
-    TRAIN = "train"
-
-class State(MessagesState):
-    # Input
-    next_agent: str
-    origin: Optional[str]
-    destination: Optional[str]
-    departure_date: Optional[str]
-    return_date: Optional[str]
-    departure_time: Optional[str]
-    return_time: Optional[str]
-    mode: Optional[TransportMode]
-
-    # Output / processing
-    train_results: Optional[List[Dict]]
-    bus_results: Optional[List[Dict]]
-    flight_results: Optional[Dict]   # raw API results
-    booking_options: list
-    selected_option: dict
-    booking_confirmed: bool
+State = state.State
 
 def flight_search_node(state: State) -> State:
     try:
@@ -35,11 +13,28 @@ def flight_search_node(state: State) -> State:
         results = search_flights(
             state["origin"], state["destination"], state["departure_date"], token
         )
-        # Store RAW results (do NOT extract fields here)
         state["flight_results"] = results
+        if results:
+            # Use the original user query if available, else fallback
+            user_query = state.get("user_query", f"Find me flights from {state['origin']} to {state['destination']} on {state['departure_date']}")
+
+            # Call LLM for filtering + extraction
+            llm_output = filter_and_extract_flights(user_query, results)
+            # Store processed results in state
+            state["flight_results"] = llm_output.get("filtered_results", [])
+
+            # Print summary + results table
+            print("\nGemini Summary:")
+            print(llm_output.get("summary", ""))
+            print("\nFlight Results:")
+            print_flights_table(state["flight_results"])
+        else:
+            print("No flights found.")
+
     except Exception as e:
         state["flight_results"] = {}
-        print("Error fetching flights:", e)
+        print("Error fetching or processing flights:", e)
+
     return state
 
 # Build workflow
@@ -48,33 +43,18 @@ graph.add_node("flight_search_node", flight_search_node)
 graph.set_entry_point("flight_search_node")
 graph.add_edge("flight_search_node", END)
 
-# Compile
 flightSearchAgent = graph.compile()
 
 # Test run
 if __name__ == "__main__":
-    user_query = "Find me flights from New York to Zurich on the next Wednesday?"
+    user_query = "Find me flights from New York to Zurich on the next Sunday?"
     initial_state = {
         "origin": "JFK",
         "destination": "ZRH",
-        "departure_date": "2025-09-24",
-        "flight_results": {}
+        "departure_date": "2025-09-28",
+        "flight_results": {},
+        "user_query": user_query,  # keep query in state so node can use it
     }
 
     print("Running flight search agent...")
     final_state = flightSearchAgent.invoke(initial_state)
-
-    raw_results = final_state.get("flight_results", {})
-    if (not raw_results):
-        print("No flights found.")
-    else:
-        # LLM handles filtering + extraction
-        llm_output = filter_and_extract_flights(user_query, raw_results)
-
-        # Print summary
-        print("\nGemini Summary:")
-        print(llm_output["summary"])
-
-        # Print results table
-        print("\nFiltered Flight Results:")
-        print_flights_table(llm_output["filtered_results"])
