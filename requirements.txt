@@ -16,3 +16,7 @@ gradio
 requests
 aiohttp
 python-dateutil
+
+re
+time
+tabulate
