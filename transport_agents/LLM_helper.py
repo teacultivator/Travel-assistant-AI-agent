@@ -22,20 +22,11 @@ def print_flights_table(flight_results):
     headers = ["Airline", "Price (USD)", "Duration", "Departure", "Arrival", "Stops"]
     print(tabulate(table, headers=headers, tablefmt="fancy_grid"))
 
-
 load_dotenv()
 
 genai.configure(api_key = os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
-import google.generativeai as genai
-import os, json
-from dotenv import load_dotenv
-
-load_dotenv()
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
 
 def filter_and_extract_flights(user_query: str, raw_results: dict):
     """
@@ -51,8 +42,8 @@ def filter_and_extract_flights(user_query: str, raw_results: dict):
     {raw_json}
 
     Your task:
-    1. Filter the flight offers that are most relevant to the query.
-    2. For each relevant flight, ALWAYS extract the fields mentioned below. All fields are MANDATORY!
+    1. Filter the flight offers that are most relevant to the query. After you filter the flight offers, pick maximum 10 flight offers most relevant to the user query!
+    2. For each relevant flight, ALWAYS extract the fields mentioned below. All fields are MANDATORY! Do not miss out on any of the below fields!
        - airline
        - price (total, USD)
        - duration
