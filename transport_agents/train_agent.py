@@ -1,208 +1,163 @@
 import os
-import re
-import dateparser
 import requests
-from datetime import datetime
-from langchain.tools import tool
-from langgraph.prebuilt import ToolNode, tools_condition
-from langgraph.graph import StateGraph, START, END
-from langchain.chat_models import init_chat_model
-from typing import TypedDict, List, Dict, Optional, Annotated
-from enum import Enum
-from langgraph.graph.message import add_messages
-from dotenv import load_dotenv
-from langgraph.graph import MessagesState
-from graph.state import State
+import dateparser
+from typing import Any, Dict, List, Optional
 
-# Load environment variables for API keys
-load_dotenv()
+# LangChain & LangGraph Imports
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.tools import tool
+
+# Assuming 'State' is defined in a shared file like 'graph/state.py'
+# from graph.state import State 
+# Using a placeholder for standalone execution:
+class State(dict):
+    """A dictionary-based placeholder for the application's state."""
+    pass
+
+# ---
+# 1. SETUP: Initialize LLM 
+# ---
+
+# Ensure your GOOGLE_API_KEY is set in your environment
+try:
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+except Exception as e:
+    print(f"Error initializing LLM. Make sure GOOGLE_API_KEY is set. Details: {e}")
+    llm = None
+
+# ---
+# 2. TOOL DEFINITION: The tool for fetching train data
+# ---
 
 CITY_TO_CODE = {
     "delhi": "NDLS",
-    "new delhi": ["NDLS", "ANVT", "DLI", "NZM", "DEE", "DSA"],
+    "new delhi": "NDLS",
     "patna": "PNBE",
     "mumbai": "CSTM",
     "kolkata": "HWH",
     "chennai": "MAS",
-    # Add more as needed
 }
 
-class TransportMode(Enum):
-    FLIGHT = "flight"
-    BUS = "bus"
-    TRAIN = "train"
-
-
 def fetch_trains_by_day(date_str: str, source: str, destination: str) -> str:
+    """Helper function to call the train API."""
     try:
         dt = dateparser.parse(date_str)
         if not dt:
             return f"Could not parse date: {date_str}"
         weekday_key = dt.strftime("%a").lower()[:3]
+
+        api_key = os.getenv("RAPIDAPI_KEY")
+        if not api_key:
+            return "API key 'RAPIDAPI_KEY' not found. Please set it in your environment."
+
         headers = {
-            'x-rapidapi-key': os.getenv("bd2eb2510fmshac0a7df8a5da592p128912jsn1d08c95ac607"),
+            'x-rapidapi-key': api_key,
             'x-rapidapi-host': "irctc1.p.rapidapi.com"
         }
-        url = f"https://irctc1.p.rapidapi.com/api/v3/getLiveStation?fromStationCode={source}&toStationCode={destination}&hours=24"
+        url = f"https://irctc1.p.rapidapi.com/api/v3/getLiveStation?fromStationCode={source}&toStationCode={destination}&hours=8"
+        
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
-        trains = response.json().get("data", [])
-        trains_today = [
-            t for t in trains if t.get("runDays", {}).get(weekday_key, False)
-        ]
-        if not trains_today:
-            return f"No trains found on {dt.strftime('%d-%m-%Y')} from {source} to {destination}."
-        formatted = "\n".join(
-            f"{t['trainName']} ({t['trainNumber']}) at {t['departureTime']}" for t in trains_today
-        )
-        return f"Available trains on {dt.strftime('%d-%m-%Y')} from {source} to {destination}:\n{formatted}"
-    except Exception as e:
-        return f"API error: {str(e)}"
+        data = response.json()
 
-@tool("train_options_tool")
+        trains = data.get("data", [])
+        if not trains:
+            return f"No trains were found in the API response for the route from {source} to {destination}."
+
+        trains_today = [t for t in trains if t.get("runDays", {}).get(weekday_key, False)]
+        
+        if not trains_today:
+            return f"No trains are scheduled to run on {dt.strftime('%A, %d-%m-%Y')} from {source} to {destination}."
+
+        formatted = "\n".join(f"- {t['trainName']} ({t['trainNumber']}) departing at {t['departureTime']}" for t in trains_today)
+        return f"Available trains on {dt.strftime('%d-%m-%Y')} from {source} to {destination}:\n{formatted}"
+    except requests.exceptions.HTTPError as http_err:
+        return f"An HTTP error occurred: {http_err}. The API might be unavailable or the station codes might be invalid."
+    except Exception as e:
+        return f"An unexpected error occurred while fetching train data: {str(e)}"
+
+@tool
 def train_options_tool(date_str: str, source: str, destination: str) -> str:
     """
-    Fetches available trains between two stations on a given date using the IRCTC RapidAPI.
+    Fetches available trains between two stations on a given date.
+    
+    Args:
+        date_str: The date of travel in a recognizable format (e.g., '2024-12-25', 'tomorrow').
+        source: The source city name (e.g., 'Delhi', 'Patna').
+        destination: The destination city name (e.g., 'Mumbai', 'Kolkata').
     """
-    return fetch_trains_by_day(date_str, source, destination)
+    def resolve_city_code(city):
+        """Resolves city name to station code."""
+        code = CITY_TO_CODE.get(city.strip().lower(), city.strip().upper())
+        # Handles cases where a city has multiple codes, just takes the first
+        return code[0] if isinstance(code, list) else code
 
-tools = [train_options_tool]
-graph_builder = StateGraph(State)
-llm = init_chat_model("google_genai:gemini-2.0-flash")
+    source_code = resolve_city_code(source)
+    destination_code = resolve_city_code(destination)
+    
+    return fetch_trains_by_day(date_str, source_code, destination_code)
 
-def system_context(state: State) -> str:
-    """Generate system context string from current state fields."""
-    items = []
-    if state.get("origin"):
-        items.append(f"Origin: {state['origin']}")
-    if state.get("destination"):
-        items.append(f"Destination: {state['destination']}")
-    if state.get("departure_date"):
-        items.append(f"Departure Date: {state['departure_date']}")
-    if state.get("mode"):
-        items.append(f"Mode: {state['mode'].value}")
-    return " | ".join(items)
 
-def chatbot(state: State):
-    # Inject summary context in every LLM call
-    system_msg = {"role": "system", "content": system_context(state)}
-    full_history = [system_msg] + state["messages"]
-    return {"messages": state["messages"] + [llm.invoke(full_history)]}
+# ---
+# 3. TRAIN AGENT NODE
+# ---
 
-tool_node = ToolNode(tools=tools)
-graph_builder.add_node("chatbot", chatbot)
-graph_builder.add_node("tools", tool_node)
-graph_builder.add_conditional_edges("chatbot", tools_condition)
-graph_builder.add_edge("tools", "chatbot")
-graph_builder.add_edge(START, "chatbot")
-graph = graph_builder.compile()
+def train_agent(state: State) -> Dict[str, Any]:
+    """
+    A specialist agent for handling train-related queries.
+    
+    This agent assumes the state has been populated with origin, destination,
+    and departure_date by a previous node (like a query parser).
+    
+    It operates in two stages:
+    1.  If the last message is not a ToolMessage, it calls the `train_options_tool`.
+    2.  If the last message is a ToolMessage, it summarizes the results for the user.
+    """
+    messages = state["messages"]
+    
+    # Stage 2: Summarize the results from the tool call.
+    if isinstance(messages[-1], ToolMessage):
+        # Create a prompt to summarize the tool's output.
+        summary_prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are a helpful travel assistant. Summarize the provided train options for the user in a clear and friendly manner. If no trains were found, state that and apologize for the inconvenience."),
+            ("user", "Here are the train search results:\n\n{tool_output}")
+        ])
+        
+        # Chain the prompt with the LLM to generate the summary.
+        chain = summary_prompt | llm
+        response = chain.invoke({"tool_output": messages[-1].content})
+        
+        # Append the summary to the messages and prepare to end this branch.
+        return {"messages": messages + [AIMessage(content=response.content)]}
 
-def resolve_city_code(city):
-    code_data = CITY_TO_CODE.get(city.strip().lower())
-    if not code_data:
-        return city.strip().upper()
-    if isinstance(code_data, list):
-        return code_data[0]
-    return code_data
+    # Stage 1: Call the tool with information from the state.
+    # Bind the tool to the LLM so it knows how to call it.
+    llm_with_tools = llm.bind_tools([train_options_tool])
+    
+    # Create a prompt that instructs the LLM to use the tool.
+    # We pass the state variables directly to the tool call, making it deterministic.
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a travel assistant whose only job is to find train options. Use the `train_options_tool` to search for trains based on the user's confirmed travel plans."),
+        # This user message is a template that will be filled from the state.
+        ("user", "Please find trains from {origin} to {destination} on {departure_date}.")
+    ])
 
-def run_chatbot():
-    state: State = {
-        "messages": [],
-        "next_agent": None,
-        "origin": None,
-        "destination": None,
-        "departure_date": None,
-        "return_date": None,
-        "departure_time": None,
-        "return_time": None,
-        "mode": None,
-        "train_results": None,
-        "bus_results": None,
-        "flight_results": None,
-        "booking_options": None,
-        "selected_option": None,
-        "booking_confirmed": None,
-    }
-    print("Train Assistant: Type 'exit' to quit.")
-    print("Ask: 'Give me some train options between delhi and patna on 21-09-2025' or '21-09-2025 NDLS PNBE'")
-    exit_commands = {"exit", "bye", "goodbye", "quit", "close", "end"}
-    while True:
-        user_input = input("Message: ").strip()
-        if user_input.lower() in exit_commands:
-            print("Goodbye!")
-            break
-
-        # Date extraction (supports some natural dates)
-        date_match = re.search(r'(\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}|tomorrow|today|next [a-zA-Z]+)', user_input, re.IGNORECASE)
-        date_str = date_match.group(1) if date_match else ""
-
-        # Origin/destination extraction
-        city_matches = re.findall(r'between ([a-zA-Z ]+) and ([a-zA-Z ]+)', user_input, re.IGNORECASE)
-        if city_matches:
-            city1, city2 = city_matches[0]
-            source = resolve_city_code(city1)
-            destination = resolve_city_code(city2)
-        else:
-            code_matches = re.findall(r'([A-Z]{2,5})', user_input)
-            if len(code_matches) >= 2:
-                source, destination = code_matches[0], code_matches[1]
-            else:
-                source, destination = "", ""
-
-        # Mode inference (only 'train' demo for now)
-        state['mode'] = TransportMode.TRAIN if "train" in user_input.lower() else None
-        state['origin'] = source if source else None
-        state['destination'] = destination if destination else None
-        state['departure_date'] = date_str if date_str else None
-
-        # If all info for querying trains is present, call API directly
-        if date_str and source and destination:
-            tool_response = fetch_trains_by_day(date_str, source, destination)
-            print(tool_response)
-            state["messages"] += [{"role": "user", "content": user_input}, {"role": "assistant", "content": tool_response}]
-            state["train_results"] = tool_response
-            continue
-
-        # Default: Let LLM resolve next step with injected state context
-        state["messages"] += [{"role": "user", "content": user_input}]
-        state = graph.invoke(state)
-        if state.get("messages") and len(state["messages"]) > 0:
-            last_message = state["messages"][-1]
-            # Extract only the plain string reply, even if nested or wrapped
-            def extract_content(msg):
-                if isinstance(msg, dict):
-                    # Try 'content' key first
-                    if 'content' in msg and isinstance(msg['content'], str):
-                        return msg['content']
-                    # If 'content' is a dict, recurse
-                    if 'content' in msg and isinstance(msg['content'], dict):
-                        return extract_content(msg['content'])
-                    # Sometimes reply is under 'text' or other keys
-                    for key in ['text', 'reply', 'message']:
-                        if key in msg and isinstance(msg[key], str):
-                            return msg[key]
-                        if key in msg and isinstance(msg[key], dict):
-                            return extract_content(msg[key])
-                    # Fallback: stringified dict
-                    return str(msg)
-                # If the string looks like 'content=...', extract after 'content='
-                s = str(msg)
-                if s.startswith('content='):
-                    # Try to extract the quoted string after content=
-                    match = re.search(r"content='([^']*)'", s)
-                    if match:
-                        return match.group(1)
-                return s
-            # Print only the reply text, with no extra labels or wrappers
-            reply = extract_content(last_message)
-            # Remove leading 'content="' or "content='" and trailing quote if present
-            match = re.match(r"content=['\"]?(.*)['\"]?$", reply)
-            if match:
-                reply = match.group(1)
-            print(reply)
-
-if __name__ == "__main__":
-    run_chatbot()
+    # Create the chain to invoke the tool.
+    chain = prompt | llm_with_tools
+    
+    # Invoke the chain with the necessary info from the state.
+    # This will generate an AIMessage containing the tool call.
+    ai_message_with_tool_call = chain.invoke({
+        "origin": state['origin'],
+        "destination": state['destination'],
+        "departure_date": state['departure_date']
+    })
+    
+    # Append the AI's tool-calling message to the history.
+    # The graph will see this and route to the ToolNode next.
+    return {"messages": messages + [ai_message_with_tool_call]}
 
 
 
