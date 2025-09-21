@@ -1,6 +1,4 @@
-from langgraph.graph import StateGraph, END  # , MessagesState
-# from typing import TypedDict, List, Dict, Optional
-# from enum import Enum
+from langgraph.graph import StateGraph, END  
 from transport_agents.API_helper import get_access_token, search_flights
 from graph import state  # self built state 
 from transport_agents.LLM_helper import filter_and_extract_flights, print_flights_table
@@ -13,7 +11,7 @@ def flight_search_node(state: State) -> State:
         results = search_flights(
             state["origin"], state["destination"], state["departure_date"], token
         )
-        state["flight_results"] = results
+        
         if results:
             # Use the original user query if available, else fallback
             user_query = state.get("user_query", f"Find me flights from {state['origin']} to {state['destination']} on {state['departure_date']}")
@@ -35,6 +33,7 @@ def flight_search_node(state: State) -> State:
         state["flight_results"] = {}
         print("Error fetching or processing flights:", e)
 
+    state["next_agent"] = "Result_Analysis_Agent"
     return state
 
 # Build workflow
@@ -47,11 +46,11 @@ flightSearchAgent = graph.compile()
 
 # Test run
 if __name__ == "__main__":
-    user_query = "Find me flights from New York to Zurich on the next Sunday?"
+    user_query = "Find me quick flights from Pune to Delhi on next Tuesday?"
     initial_state = {
-        "origin": "JFK",
-        "destination": "ZRH",
-        "departure_date": "2025-09-28",
+        "origin": "Pune",
+        "destination": "Delhi",
+        "departure_date": "2025-09-30",
         "flight_results": {},
         "user_query": user_query,  # keep query in state so node can use it
     }
