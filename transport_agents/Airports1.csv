@@ -167,7 +167,6 @@ YXP,Pangnirtung Airport,Pangnirtung
 YXR,Earlton (Timiskaming Regional) Airport,Earlton
 YXS,Prince George Airport,Prince George
 YXT,Northwest Regional Airport Terrace-Kitimat,Terrace
-YXU,London Airport,London
 YXX,Abbotsford Airport,Abbotsford
 YXY,Whitehorse / Erik Nielsen International Airport,Whitehorse
 YYB,North Bay Jack Garland Airport,North Bay
@@ -382,6 +381,7 @@ YLI,Ylivieska Airfield,Ylivieska-raudaskyla
 BFS,Belfast International Airport,Belfast
 ENK,St Angelo Airport,Enniskillen
 BHD,George Best Belfast City Airport,Belfast
+LHR,London Heathrow Airport,London
 LDY,City of Derry Airport,Londonderry
 BHX,Birmingham International Airport,Birmingham
 CVT,Coventry Airport,Coventry
@@ -410,7 +410,7 @@ LGW,London Gatwick Airport,London
 LCY,London City Airport,London
 FAB,Farnborough Airport,Farnborough
 BBS,Blackbushe Airport,Blackbushe
-LHR,London Heathrow Airport,London
+
 SEN,Southend Airport,Southend
 LYX,Lydd Airport,Lydd
 MSE,Kent International Airport,Manston

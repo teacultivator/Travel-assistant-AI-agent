@@ -161,7 +161,7 @@ def query_parser(state: State) -> Dict[str, Any]:
                     if (field_value.startswith('[') and field_value.endswith(']')) or \
                        field_value in ['[city name]', '[YYYY-MM-DD]', '[HH:MM]', '[actual city name from user input]', 
                                      '[actual date in YYYY-MM-DD format]', '[actual time in HH:MM format]']:
-                        print(f"DEBUG: Ignoring placeholder value: {field_value}")
+                        
                         continue
                     
                     # Map field names and validate
@@ -244,8 +244,6 @@ def query_parser(state: State) -> Dict[str, Any]:
             "needs_user_input": needs_input,
             **final_state  # Include all travel information (current + updated)
         }
-        
-        print(f"DEBUG: Returning state with next_agent: {next_agent}, needs_user_input: {needs_input}")
         return result
         
     except Exception as e:

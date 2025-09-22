@@ -2,21 +2,21 @@ from langgraph.graph import StateGraph,END
 from typing import TypedDict, Annotated, List, Literal, Dict, Any
 from graph.state import State
 from query_parser_agent.queryparser import query_parser
-# from transport_agents.FlightAgent2 import flight_search_node
+from transport_agents.FlightAgent2 import flight_search_node
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 
 # Mock flight agent for testing
-def flight_search_node(state: State) -> Dict[str, Any]:
-    """Mock flight agent for testing"""
-    messages = state.get("messages", [])
-    response_msg = f"Flight search initiated for {state.get('origin')} to {state.get('destination')} on {state.get('departure_date')}"
+# def flight_search_node(state: State) -> Dict[str, Any]:
+#     """Mock flight agent for testing"""
+#     messages = state.get("messages", [])
+#     response_msg = f"Flight search initiated for {state.get('origin')} to {state.get('destination')} on {state.get('departure_date')}"
     
-    return {
-        **state,
-        "messages": messages + [AIMessage(content=response_msg)],
-        "next_agent": "end",
-        "needs_user_input": False
-    }
+    # return {
+    #     **state,
+    #     "messages": messages + [AIMessage(content=response_msg)],
+    #     "next_agent": "end",
+    #     "needs_user_input": False
+    # }
 
 def bus_search_node(state: State) -> Dict[str, Any]:
     """Mock bus agent for testing"""
