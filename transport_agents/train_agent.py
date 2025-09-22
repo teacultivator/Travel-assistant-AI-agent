@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
 from graph.state import State
-from transport_agents.LLM_helper import filter_and_extract_trains, print_trains_table
+
 
 # Load environment variables for API keys
 load_dotenv()
@@ -254,6 +254,7 @@ if __name__ == "__main__":
             print(last_message.content)
         else:
             print(str(last_message))   
+
 
 
 
