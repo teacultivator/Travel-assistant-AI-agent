@@ -25,3 +25,4 @@ class State(MessagesState):
     booking_options: list
     selected_option: dict
     booking_confirmed: bool
+    needs_user_input: bool 

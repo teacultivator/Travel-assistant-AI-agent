@@ -13,7 +13,7 @@ TOKEN_EXPIRY = 0  # unix timestamp
 # Get the directory where this script (API_helper.py) resides
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Construct full path to Airports2.csv
-AIRPORTS_FILE = os.path.join(BASE_DIR, "Airports2.csv")
+AIRPORTS_FILE = os.path.join(BASE_DIR, "Airports1.csv")
 
 # Load airport codes safely
 _airports_df = pd.read_csv(AIRPORTS_FILE)[["City", "IATA_Code"]].dropna()

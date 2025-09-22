@@ -1,9 +1,7 @@
 from langgraph.graph import StateGraph, END  
 from transport_agents.API_helper import get_access_token, search_flights
-from graph import state  # self built state 
+from graph.state import State
 from transport_agents.LLM_helper import filter_and_extract_flights, print_flights_table
-
-State = state.State
 
 def flight_search_node(state: State) -> State:
     try:
@@ -33,19 +31,21 @@ def flight_search_node(state: State) -> State:
         state["flight_results"] = {}
         print("Error fetching or processing flights:", e)
 
-    state["next_agent"] = "Result_Analysis_Agent"
+    # state["next_agent"] = "Result_Analysis_Agent"
+    state["next_agent"] = "end"
     return state
 
-# Build workflow
-graph = StateGraph(State)
-graph.add_node("flight_search_node", flight_search_node)
-graph.set_entry_point("flight_search_node")
-graph.add_edge("flight_search_node", END)
 
-flightSearchAgent = graph.compile()
 
 # Test run
 if __name__ == "__main__":
+    # Build workflow
+    graph = StateGraph(State)
+    graph.add_node("flight_search_node", flight_search_node)
+    graph.set_entry_point("flight_search_node")
+    graph.add_edge("flight_search_node", END)
+
+    flightSearchAgent = graph.compile()
     user_query = "Find me quick flights from Pune to Delhi on next Tuesday?"
     initial_state = {
         "origin": "Pune",
