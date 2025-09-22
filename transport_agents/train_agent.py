@@ -14,6 +14,10 @@ from langgraph.graph import MessagesState
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
+import sys
+import os
+# Add the parent directory to the Python path to import from graph module
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from graph.state import State
 
 
@@ -38,9 +42,28 @@ CITY_TO_CODE = {
 
 def fetch_trains_by_day(date_str: str, source: str, destination: str) -> str:
     try:
-        dt = dateparser.parse(date_str)
+        # Try different date parsing approaches
+        dt = dateparser.parse(date_str, settings={'PREFER_DATES_FROM': 'future'})
         if not dt:
-            return f"Could not parse date: {date_str}"
+            # Try with current date context
+            from datetime import datetime, timedelta
+            today = datetime.now()
+            if 'tuesday' in date_str.lower():
+                # Find next Tuesday
+                days_ahead = 1 - today.weekday()  # Tuesday is day 1
+                if days_ahead <= 0:  # Target day already happened this week
+                    days_ahead += 7
+                dt = today + timedelta(days_ahead)
+            elif 'monday' in date_str.lower():
+                days_ahead = 0 - today.weekday()
+                if days_ahead <= 0:
+                    days_ahead += 7
+                dt = today + timedelta(days_ahead)
+            # Add more day mappings as needed
+            
+        if not dt:
+            return f"Could not parse date: {date_str}. Please use format like '2023-10-15' or specific dates."
+            
         weekday_key = dt.strftime("%a").lower()[:3]
         
         api_key = os.getenv("RAPIDAPI_KEY")
@@ -118,19 +141,41 @@ def train_search_node(state: State) -> Dict[str, Any]:
     """
     messages = state.get("messages", [])
     
+    # CIRCUIT BREAKER: Check if we just got a tool result - if so, format and end , very important to break the look of api calling.
+    if messages:
+        last_msg = messages[-1]
+        # Check if the last message looks like a tool result
+        if (hasattr(last_msg, 'content') and last_msg.content and 
+            ('Available trains on' in str(last_msg.content) or 
+             'No trains found' in str(last_msg.content) or 
+             'API error:' in str(last_msg.content))):
+            
+            print("DEBUG: Tool result detected, formatting final response")
+            tool_result = last_msg.content
+            formatted_response = f"🚂 **Train Search Results**\n\n{tool_result}\n\nHave a great journey!"
+            
+            return {
+                **state,
+                "messages": messages + [AIMessage(content=formatted_response)],
+                "next_agent": "end",
+                "needs_user_input": False
+            }
+    
     # Get the user query from the latest message or from state
     user_query = ""
     if messages:
-        # Extract from the latest message
+        # Extract from the latest message, but skip tool results
         for msg in reversed(messages):
-            if hasattr(msg, 'content'):
+            if hasattr(msg, 'content') and msg.content:
+                # Skip if this looks like a tool result
+                if ('Available trains on' in str(msg.content) or 
+                    'No trains found' in str(msg.content) or 
+                    'API error:' in str(msg.content)):
+                    continue
                 user_query = msg.content
                 break
             elif isinstance(msg, dict) and 'content' in msg:
                 user_query = msg['content']
-                break
-            else:
-                user_query = str(msg)
                 break
     elif state.get("user_query"):
         user_query = state["user_query"]
@@ -181,22 +226,13 @@ Be helpful and conversational in your responses."""
             {"role": "user", "content": user_query}
         ]
 
+        print("DEBUG: Calling LLM with tools...")
         # Get response from LLM with tools
         response = llm_with_tools.invoke(llm_messages)
+        print(f"DEBUG: LLM Response received: {type(response)}")
         
-        # Convert response to proper AIMessage format
-        if hasattr(response, 'content'):
-            response_content = response.content
-        else:
-            response_content = str(response)
-        
-        # Return state compatible with main_graph.py
-        return {
-            **state,  # Preserve all existing state
-            "messages": messages + [AIMessage(content=response_content)],
-            "next_agent": "end",
-            "needs_user_input": False
-        }
+        # Return messages in the same format as working main.py
+        return {"messages": [response]}
         
     except Exception as e:
         error_msg = f"Error processing train request: {str(e)}"
@@ -219,7 +255,7 @@ graph.add_node("tools", tool_node)
 
 graph.add_edge(START, "train_search_node")
 graph.add_conditional_edges("train_search_node", tools_condition)
-graph.add_edge("tools", "train_search_node")
+graph.add_edge("tools", "train_search_node")  # Go back to format the tool result
 
 train_chatbot = graph.compile()
 
@@ -254,6 +290,7 @@ if __name__ == "__main__":
             print(last_message.content)
         else:
             print(str(last_message))   
+
 
 
 
