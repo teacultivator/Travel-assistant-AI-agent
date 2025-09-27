@@ -5,6 +5,7 @@ from query_parser_agent.queryparser import query_parser
 from transport_agents.FlightAgent2 import flight_search_node
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 
+
 # Mock flight agent for testing
 # def flight_search_node(state: State) -> Dict[str, Any]:
 #     """Mock flight agent for testing"""
@@ -30,17 +31,17 @@ def bus_search_node(state: State) -> Dict[str, Any]:
         "needs_user_input": False
     }
 
-def train_search_node(state: State) -> Dict[str, Any]:
-    """Mock train agent for testing"""
-    messages = state.get("messages", [])
-    response_msg = f"Train search initiated for {state.get('origin')} to {state.get('destination')} on {state.get('departure_date')}"
+# def train_search_node(state: State) -> Dict[str, Any]:
+#     """Mock train agent for testing"""
+#     messages = state.get("messages", [])
+#     response_msg = f"Train search initiated for {state.get('origin')} to {state.get('destination')} on {state.get('departure_date')}"
     
-    return {
-        **state,
-        "messages": messages + [AIMessage(content=response_msg)],
-        "next_agent": "end",
-        "needs_user_input": False
-    }
+#     return {
+#         **state,
+#         "messages": messages + [AIMessage(content=response_msg)],
+#         "next_agent": "end",
+#         "needs_user_input": False
+#     }
 
 def create_workflow():
     """Create and configure the workflow graph"""

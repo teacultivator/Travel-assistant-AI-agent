@@ -19,7 +19,7 @@ COMMON_AIRPORTS = {
     'london': 'LHR',
     'new york': 'JFK',
     'los angeles': 'LAX',
-    'tokyo': 'NRT',
+    'tokyo': 'NRT', 
     'madrid': 'MAD',
     'barcelona': 'BCN',
     'rome': 'FCO',
