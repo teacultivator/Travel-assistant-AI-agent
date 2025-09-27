@@ -25,7 +25,7 @@ def print_flights_table(flight_results):
 load_dotenv()
 
 genai.configure(api_key = os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.5-pro")
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 
 def filter_and_extract_flights(user_query: str, raw_results: dict):
@@ -36,41 +36,49 @@ def filter_and_extract_flights(user_query: str, raw_results: dict):
     raw_json = json.dumps(raw_results, indent=2)
 
     prompt = f"""
+    You are a helpful Flight Searching Agent. Your task is to satisfy client's requirements.
+
     The user asked: "{user_query}"
 
     Here is the raw data of flights offers (Amadeus API response):
     {raw_json}
 
-    Your task:
-    1. Filter the flight offers that perfectly match the user preferences.
-    2. For each relevant flight, ALWAYS extract the fields mentioned below. All fields are MANDATORY! Do not miss out on any of the below fields!
+    You must follow these steps IN ORDER:
+
+    Step 1: From the raw flight offers, SELECT ONLY those flights that satisfy ALL of the user’s constraints. 
+        - Constraints come directly from the user query.
+        - If a flight does not satisfy ALL constraints, IGNORE it completely.
+        
+    Step 2: 
+    2. For each relevant flight, ALWAYS extract the fields mentioned below (mandatory). Only extract the following fields:
        - airline
        - price (total, in Indian Rupees)
        - duration
        - departure_time
        - arrival_time
-       - stops (number of stops)
-    3. MOST IMPORANTLY, Output a valid JSON object with this structure:
-       {{
-         "summary": "short human-friendly text summarizing results in 1-2 sentences",
-         "filtered_results": [
-            {{
-              "airline": "...",
-              "price": "...",
-              "duration": "...",
-              "departure_time": "...",
-              "arrival_time": "...",
-              "stops": "..."
-            }}
-         ]
-       }}
-       You may use raw_json["data"][<index of offer>]["price"]["total"] to extract the price.
-    Make sure it is valid JSON only, no extra text outside JSON. STRICTLY do NOT include any tables or formatting.
-    IMPORTANT:
-       - Reject ALL flights that do not meet the user constraints exactly.
-       - Do not include them in filtered_results, not even for context.
-       - If no flights meet the criteria, return {{"summary": "No flights found", "filtered_results": []}} json.
+       - stops (integer number of stops)
+       
 
+    Step 3: Produce the final output as valid JSON with this exact structure:
+   {{
+    "summary": "short human-friendly text summarizing results in 1-2 sentences",
+    "filtered_results": [
+        {{
+        "airline": "...",
+        "price": "...",
+        "duration": "...",
+        "departure_time": "...",
+        "arrival_time": "...",
+        "stops": "..."
+        }}
+    ]
+   }}
+    You may use raw_json["data"][<index of offer>]["price"]["total"] to extract the price.
+    VERY IMPORTANT:
+        - Do not include flights that fail constraints.
+        - Do not include extra text or formatting outside JSON.
+        - If no flights meet the criteria, return:
+        {{"summary": "No flights found", "filtered_results": []}}
     """
 
     def safe_json_parse(raw_text: str):
