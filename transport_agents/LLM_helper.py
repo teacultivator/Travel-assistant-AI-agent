@@ -25,7 +25,7 @@ def print_flights_table(flight_results):
 load_dotenv()
 
 genai.configure(api_key = os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = genai.GenerativeModel("gemini-2.5-pro")
 
 
 def filter_and_extract_flights(user_query: str, raw_results: dict):
@@ -42,10 +42,10 @@ def filter_and_extract_flights(user_query: str, raw_results: dict):
     {raw_json}
 
     Your task:
-    1. Filter the flight offers that are most relevant to the query. After you filter the flight offers, pick maximum 10 flight offers most relevant to the user query!
+    1. Filter the flight offers that perfectly match the user preferences.
     2. For each relevant flight, ALWAYS extract the fields mentioned below. All fields are MANDATORY! Do not miss out on any of the below fields!
        - airline
-       - price (total, USD)
+       - price (total, in Indian Rupees)
        - duration
        - departure_time
        - arrival_time
@@ -66,6 +66,11 @@ def filter_and_extract_flights(user_query: str, raw_results: dict):
        }}
        You may use raw_json["data"][<index of offer>]["price"]["total"] to extract the price.
     Make sure it is valid JSON only, no extra text outside JSON. STRICTLY do NOT include any tables or formatting.
+    IMPORTANT:
+       - Reject ALL flights that do not meet the user constraints exactly.
+       - Do not include them in filtered_results, not even for context.
+       - If no flights meet the criteria, return {{"summary": "No flights found", "filtered_results": []}} json.
+
     """
 
     def safe_json_parse(raw_text: str):
