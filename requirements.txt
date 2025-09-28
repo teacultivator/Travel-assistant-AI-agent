@@ -16,5 +16,9 @@ gradio
 requests
 aiohttp
 python-dateutil
+
+re
+time
+tabulate
 typing-extensions
 dateparser
