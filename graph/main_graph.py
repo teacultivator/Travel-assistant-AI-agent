@@ -31,17 +31,17 @@ def bus_search_node(state: State) -> Dict[str, Any]:
         "needs_user_input": False
     }
 
-# def train_search_node(state: State) -> Dict[str, Any]:
-#     """Mock train agent for testing"""
-#     messages = state.get("messages", [])
-#     response_msg = f"Train search initiated for {state.get('origin')} to {state.get('destination')} on {state.get('departure_date')}"
+def train_search_node(state: State) -> Dict[str, Any]:
+    """Mock train agent for testing"""
+    messages = state.get("messages", [])
+    response_msg = f"Train search initiated for {state.get('origin')} to {state.get('destination')} on {state.get('departure_date')}"
     
-#     return {
-#         **state,
-#         "messages": messages + [AIMessage(content=response_msg)],
-#         "next_agent": "end",
-#         "needs_user_input": False
-#     }
+    return {
+        **state,
+        "messages": messages + [AIMessage(content=response_msg)],
+        "next_agent": "end",
+        "needs_user_input": False
+    }
 
 def create_workflow():
     """Create and configure the workflow graph"""
@@ -83,8 +83,14 @@ def print_travel_state(state: Dict[str, Any]):
     print("\n" + "="*50)
     print("CURRENT TRAVEL INFORMATION:")
     print("="*50)
-    print(f"Origin: {state.get('origin', 'Not set')}")
-    print(f"Destination: {state.get('destination', 'Not set')}")
+    origin_line = state.get('origin', 'Not set')
+    if state.get('origin_country'):
+        origin_line += f" ({state.get('origin_country')})"
+    dest_line = state.get('destination', 'Not set')
+    if state.get('destination_country'):
+        dest_line += f" ({state.get('destination_country')})"
+    print(f"Origin: {origin_line}")
+    print(f"Destination: {dest_line}")
     print(f"Departure Date: {state.get('departure_date', 'Not set')}")
     print(f"Return Date: {state.get('return_date', 'Not set')}")
     print(f"Departure Time: {state.get('departure_time', 'Not set')}")
@@ -107,8 +113,11 @@ def interactive_chat():
     # Initialize state
     current_state = {
         "messages": [],
+        "user_query": "",
         "origin": "",
+        "origin_country": "",
         "destination": "",
+        "destination_country": "",
         "departure_date": "",
         "return_date": "",
         "departure_time": "",
@@ -131,8 +140,11 @@ def interactive_chat():
             elif user_input.lower() == 'reset':
                 current_state = {
                     "messages": [],
+                    "user_query": "",
                     "origin": "",
+                    "origin_country": "",
                     "destination": "",
+                    "destination_country": "",
                     "departure_date": "",
                     "return_date": "",
                     "departure_time": "",
@@ -154,6 +166,7 @@ def interactive_chat():
             
             # Add user message to state
             current_state["messages"].append(HumanMessage(content=user_input))
+            current_state["user_query"] = user_input
             current_state["needs_user_input"] = False  # We just got user input
             current_state["next_agent"] = "query_parser"  # Reset to parser for new input
             
@@ -211,8 +224,11 @@ def interactive_chat():
                 if restart in ['y', 'yes']:
                     current_state = {
                         "messages": [],
+                        "user_query": "",
                         "origin": "",
+                        "origin_country": "",
                         "destination": "",
+                        "destination_country": "",
                         "departure_date": "",
                         "return_date": "",
                         "departure_time": "",

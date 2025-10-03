@@ -1,9 +1,13 @@
 import os, requests, time, re
 from datetime import datetime, date
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import pandas as pd
 
-load_dotenv()
+try:
+    env_path = find_dotenv()
+    load_dotenv(env_path if env_path else None)
+except Exception:
+    pass
 
 API_KEY = os.getenv("AMADEUS_API_KEY")
 API_SECRET = os.getenv("AMADEUS_API_SECRET")
@@ -83,9 +87,21 @@ def get_access_token():
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
         
     try:
+        if not API_KEY or not API_SECRET:
+            missing = []
+            if not API_KEY:
+                missing.append("AMADEUS_API_KEY")
+            if not API_SECRET:
+                missing.append("AMADEUS_API_SECRET")
+            raise Exception(f"Missing environment variables: {', '.join(missing)}. Ensure they are set in your .env or environment.")
+
         response = requests.post(url, data=data, headers=headers, timeout=10)
         if response.status_code != 200:
-            raise Exception(f"Failed to generate access token: {response.status_code}")
+            try:
+                err_body = response.json()
+            except Exception:
+                err_body = {"raw": response.text}
+            raise Exception(f"Failed to generate access token: {response.status_code} - {err_body}")
         
         data = response.json()
         ACCESS_TOKEN = data["access_token"]

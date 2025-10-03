@@ -21,7 +21,9 @@ def create_query_parser_chain():
 
 Current travel information state:
 - Origin: {origin}
+- Origin Country: {origin_country}
 - Destination: {destination}  
+- Destination Country: {destination_country}
 - Departure Date: {departure_date}
 - Return Date: {return_date}
 - Departure Time: {departure_time}
@@ -40,7 +42,9 @@ INSTRUCTIONS:
 RESPONSE FORMAT:
 Return ONLY the fields that need updating in this exact format:
 ORIGIN: [actual city name from user input]
+ORIGIN_COUNTRY: [actual country name from user input]
 DESTINATION: [actual city name from user input]
+DESTINATION_COUNTRY: [actual country name from user input]
 DEPARTURE_DATE: [actual date in YYYY-MM-DD format]
 RETURN_DATE: [actual date in YYYY-MM-DD format]
 DEPARTURE_TIME: [actual time in HH:MM format]
@@ -53,7 +57,9 @@ Examples:
 User: "I want to fly from New York to Paris on December 25th"
 Response:
 ORIGIN: New York
+ORIGIN_COUNTRY: United States
 DESTINATION: Paris
+DESTINATION_COUNTRY: France
 DEPARTURE_DATE: 2024-12-25
 MODE: flight
 
@@ -116,7 +122,9 @@ def query_parser(state: State) -> Dict[str, Any]:
         # Get current state values with defaults
         current_state = {
             "origin": state.get("origin", ""),
+            "origin_country": state.get("origin_country", ""),
             "destination": state.get("destination", ""),
+            "destination_country": state.get("destination_country", ""),
             "departure_date": state.get("departure_date", ""),
             "return_date": state.get("return_date", ""),
             "departure_time": state.get("departure_time", ""),
@@ -167,7 +175,9 @@ def query_parser(state: State) -> Dict[str, Any]:
                     # Map field names and validate
                     field_mapping = {
                         "origin": "origin",
+                        "origin_country": "origin_country",
                         "destination": "destination", 
+                        "destination_country": "destination_country",
                         "departure_date": "departure_date",
                         "return_date": "return_date",
                         "departure_time": "departure_time",
@@ -181,6 +191,28 @@ def query_parser(state: State) -> Dict[str, Any]:
         
         # Merge updated fields with current state
         final_state = {**current_state, **updated_fields}
+
+        # Heuristic: infer travel mode if missing
+        inferred_mode = final_state.get("mode", "").strip().lower()
+        if not inferred_mode:
+            ql = (query or "").lower()
+            if any(k in ql for k in ["fly", "flight", "airline", "plane", "airplane"]):
+                inferred_mode = "flight"
+            elif any(k in ql for k in ["train", "rail", "railway", "bullet train"]):
+                inferred_mode = "train"
+            elif any(k in ql for k in ["bus", "coach"]):
+                inferred_mode = "bus"
+            else:
+                origin_country = (final_state.get("origin_country") or "").strip().lower()
+                destination_country = (final_state.get("destination_country") or "").strip().lower()
+                if origin_country and destination_country and origin_country != destination_country:
+                    inferred_mode = "flight"
+                elif origin_country and destination_country and origin_country == destination_country:
+                    inferred_mode = "train"
+                else:
+                    inferred_mode = "flight"
+
+            final_state["mode"] = inferred_mode
         
         
         # Validate required fields - only check non-empty values
@@ -242,6 +274,7 @@ def query_parser(state: State) -> Dict[str, Any]:
             "messages": new_messages,
             "next_agent": next_agent,
             "needs_user_input": needs_input,
+            "user_query": query,
             **final_state  # Include all travel information (current + updated)
         }
         return result
