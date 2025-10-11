@@ -10,8 +10,11 @@ class TransportMode(Enum):
 class State(MessagesState):
     # Input
     next_agent: str
+    user_query: Optional[str]
     origin: Optional[str]
+    origin_country: Optional[str]
     destination: Optional[str]
+    destination_country: Optional[str]
     departure_date: Optional[str]
     return_date: Optional[str]
     departure_time: Optional[str]
