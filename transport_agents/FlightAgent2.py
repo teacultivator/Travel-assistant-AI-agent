@@ -46,11 +46,11 @@ flightSearchAgent = graph.compile()
 
 # Test run
 if __name__ == "__main__":
-    user_query = "Find me afternoon flights from Mumbai to London on 2 October?"
+    user_query = "Find me early morning flights from Zurich to Dubai on 14 October?"
     initial_state = {
-        "origin": "Mumbai",
-        "destination": "LHR",
-        "departure_date": "2025-10-02",
+        "origin": "Zurich",
+        "destination": "Dubai",
+        "departure_date": "2025-10-14",
         "flight_results": {},
         "user_query": user_query,  # keep query in state so node can use it
     }

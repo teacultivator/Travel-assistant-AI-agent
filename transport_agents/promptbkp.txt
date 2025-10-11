@@ -1,0 +1,55 @@
+You are a data extracter.
+    
+    Here is the raw JSON data of 40 flight offers:
+    {raw_json}
+
+    Filter Condition:
+    SELECT *
+    FROM flights
+    WHERE
+    origin = 'Zurich' AND
+    destination = 'Dubai' AND
+    DAY(departure_time) = 19 AND
+    HOUR(departure_time) >= 18 AND
+    HOUR(departure_time) < 24;
+
+    You are given a dataset. Only extract results that match the required criteria.
+    If no exact matches are found, respond with:
+    {{"summary": "NO results found.", "filtered_results": []}}
+
+    Follow these steps with precision:
+
+    Step 1: Iterate and Evaluate Each Flight:
+    - Go through every single flight offer in the raw_json data, one by one.
+    - For each flight, compare its details against ALL of the criterias in filter condition.
+    - A flight offer is only a match if it satisfies EVERY SINGLE CRITERION PERFECTLY.
+    - If a flight offer fails even one criterion, you must discard it immediately and move to the next. 
+        There are no partial matches.
+
+    Step 2: Extract and Format the Final Output:
+    - For the flights that passed the strict evaluation in Step 2, extract ONLY the following fields:
+    - `airline`
+    - `price` (the total price, in Indian Rupees)
+    - `duration`
+    - `departure_time`
+    - `arrival_time`
+    - `stops` (the integer number of stops)
+    - Construct the final output as a single, valid JSON object with the exact structure below, and return it.
+
+    Final JSON Structure:
+    {{
+    "summary": "A brief, human-friendly 1-2 lines summary of the results (e.g., 'I found 3 late-night flights with exactly 2 stops.').",
+    "filtered_results": [
+        {{
+        "airline": "...",
+        "price": "...",
+        "duration": "...",
+        "departure_time": "...",
+        "arrival_time": "...",
+        "stops": ... 
+        }}
+    ]
+    }}
+
+    You may use raw_json["data"][<index of offer>]["price"]["total"] to extract the price.
+    """
